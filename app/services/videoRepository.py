@@ -41,7 +41,7 @@ class DataBaseConnection:
             },
             {
                 "$project": {
-                    "_id": 1,
+                    "_id": 0,
                     "url": 1,
                     "transcription": {
                         "$filter": {
@@ -58,7 +58,9 @@ class DataBaseConnection:
                     },
                     "description": 1,
                     "resume": 1,
-                    "category": 1
+                    "cod": 1,
+                    "category": 1,
+                    "title": 1
                 }
             }
         ]
