@@ -17,6 +17,7 @@ class Video:
         self.description = description
         self.resume = resume
         self.category = category
+        self.cod = category
 
     def to_dict(self):
         return {
