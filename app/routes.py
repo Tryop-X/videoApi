@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 from app.services import videoRepository as videoDb
 from app.models import Models as models
 import json
@@ -32,23 +32,14 @@ def get_resumen():
     data = request.get_json()
 
     # Asegúrate de que el JSON contenga la clave 'consulta'
-    if not data or 'video' not in data:
+    if not data or 'videoId' not in data:
         return jsonify({'error': 'No se proporcionó consulta'}), 400
 
-    video = data['video']
+    videoId = data['videoId']
+    id_temario = data['id_temario']
 
-    video_model = models.VideoYoutube(
-        video.get('etag'),
-        video.get('videoId'),
-        video.get('channelId'),
-        video.get('title'),
-        video.get('description'),
-        video.get('channelTitle'),
-        video.get('publishTime'),
-        video.get('urlMiniatura')
-    )
-
-    datos = vid.get_video_with_trans_resume(video_model)
+    datos = vid.get_video_with_trans_resume(id_temario, videoId)
+    print(datos)
 
     return datos.to_dict(), 200, {'ContentType': 'application/json'}
 
@@ -107,5 +98,17 @@ def get_chatear():
     }
 
     return respuesta, 200, {'ContentType': 'application/json'}
+
+
+@bp.route('/generar_doc', methods=['POST'])
+def generar_doc():
+
+    json_data = request.get_json()
+    videoSelected = json_data['videoSelected']
+    id_temario = json_data['id_temario']
+
+    vid.set_pdf_document(id_temario=id_temario, videoSelected=videoSelected)
+
+    return send_file('../test.pdf', as_attachment=True, download_name='test.pdf')
 
 

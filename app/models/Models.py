@@ -73,7 +73,7 @@ class Chat:
 
 class TemarioObject:
     def __init__(self, _id_temario: str, temaCentral: str, aspectos: List[Aspecto], chats: List[Chat], consulta: str):
-        self._id_temario = _id_temario
+        self.id_temario = _id_temario
         self.temaCentral = temaCentral
         self.aspectos = aspectos
         self.chats = chats
@@ -81,7 +81,7 @@ class TemarioObject:
 
     def to_dict(self):
         return {
-            '_id_temario': self._id_temario,
+            'id_temario': self.id_temario,
             'temaCentral': self.temaCentral,
             'consulta': self.consulta,
             'aspectos': [aspecto.to_dict() for aspecto in self.aspectos] if self.aspectos else [],

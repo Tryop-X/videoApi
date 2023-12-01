@@ -10,7 +10,12 @@ import numpy as np
 from scipy.spatial.distance import cosine
 from typing import List
 from bson.objectid import ObjectId
-
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
 
 embeddings_service = EmbeddingService()
 
@@ -27,11 +32,12 @@ def append_video(video_youtube: models.VideoYoutube, lista_items) -> bool:
         return True
     return False
 
+
 class VideoRepository:
     def __init__(self):
 
         self.client_open_ai = OpenAI(api_key=dt.API_KEY_OPENAI)
-        self.similarity_threshold = 0.80
+        self.similarity_threshold = 0.87
         try:
             self.client_mongo = MongoClient(dt.MONGO_URI)
             self.db = self.client_mongo[dt.DATABASE_NAME]
@@ -39,13 +45,14 @@ class VideoRepository:
         except Exception as e:
             print(f"Error connecting to database: {e}")
 
-    def get_resumen(self, transcription):
+    def get_resumen(self, tema, sub_temas, transcription):
+
         completion = self.client_open_ai.chat.completions.create(
             model=dt.model_resumen,
             stop=["END"],
             messages=[
                 {"role": "system",
-                 "content": dt.content_resumen},
+                 "content": dt.get_contenido(tema, sub_temas)},
                 {"role": "user",
                  "content": transcription}
             ]
@@ -65,10 +72,10 @@ class VideoRepository:
         )
         return completion.choices[0].message.content
 
-    def get_video_with_trans_resume(self, video: models.VideoYoutube):
+    def get_video_with_trans_resume(self, id_temario: str, videoId: str):
 
         try:
-            transcription = get_transcription_list(video.videoId)
+            transcription = get_transcription_list(videoId)
 
             transcript = None
 
@@ -81,8 +88,9 @@ class VideoRepository:
             for entry in transcript:
                 trans = trans + entry['text'] + " "
 
-            video.transcription = trans
-            video.resume = self.get_resumen(trans)
+            temario = self.get_temario_id_mongo(id_temario)
+
+            video = self.update_video_obj(temario=temario, idVideo=videoId, transcription=trans)
 
             return video
 
@@ -129,8 +137,6 @@ class VideoRepository:
                 ]
             )
 
-            print(completion.choices[0].message.content)
-
             json_data = json.loads(completion.choices[0].message.content
                                    .replace('```json', '')
                                    .replace('```', '')
@@ -153,8 +159,7 @@ class VideoRepository:
 
         return response.get("items", [])
 
-    def get_temario_id_mongo(self, tem_mongo):
-        temario_id = str(tem_mongo.inserted_id)
+    def get_temario_id_mongo(self, temario_id) -> models.TemarioObject:
         document_temario = self.collection.find_one({"_id": ObjectId(temario_id)})
         return mod.get_temario_from_mongo(document_temario)
 
@@ -163,8 +168,36 @@ class VideoRepository:
         emb_cons = np.ravel(embeddings_service.get_embedding(temario.consulta)).tolist()
         tem_mongo = self.collection.insert_one(temario.to_dict_mongo(emb_tem, emb_cons))
 
-        temario_saved = self.get_temario_id_mongo(tem_mongo)
+        temario_id = str(tem_mongo.inserted_id)
+        temario_saved = self.get_temario_id_mongo(temario_id)
         return temario_saved
+
+    def update_aspectos(self, temario: models.TemarioObject):
+
+        myquery = {"_id": ObjectId(temario.id_temario)}
+        new_values = {"$set": {
+            "aspectos": [asp.to_dict() for asp in temario.aspectos] if temario.aspectos else []
+        }}
+        tem_mongo = self.collection.update_one(myquery, new_values)
+        return tem_mongo
+
+    def update_content_pdf(self, temario: models.TemarioObject, contend_pdf: str):
+
+        myquery = {"_id": ObjectId(temario.id_temario)}
+        new_values = {"$set": {
+            "contend_pdf": contend_pdf
+        }}
+        tem_mongo = self.collection.update_one(myquery, new_values)
+        return tem_mongo
+    def update_video_obj(self, temario: models.TemarioObject, idVideo: str, transcription: str):
+        for asp in temario.aspectos:
+            for vid in asp.videos:
+                if vid.videoId == idVideo:
+                    vid.transcription = transcription
+                    vid.resume = self.get_resumen(temario.temaCentral, asp.aspecto, transcription)
+                    self.update_aspectos(temario)
+                    return vid
+        return None
 
     def get_temario_videos(self, temario: models.TemarioObject, hay_video: bool) -> models.TemarioObject:
 
@@ -185,10 +218,104 @@ class VideoRepository:
                         if is_unique:
                             video_puntero += 1
                             lista_items.append(video_youtube)
-                            print("SE HA AGREGADO UN VÍDEO")
 
                 asp.videos = lista_items
 
             temario_saved = self.save_temario(temario)
 
             return temario_saved
+
+    def get_pdf_content(self, tema_central: str, sub_temas: str, content: str):
+        completion = self.client_open_ai.chat.completions.create(
+            model=dt.model_pdf,
+            stop=["END"],
+            messages=[
+                {"role": "system",
+                 "content": dt.get_pdf_text(tema_central, sub_temas)},
+                {"role": "user",
+                 "content": content}
+            ]
+        )
+        return completion.choices[0].message.content
+
+    def set_pdf_document(self, id_temario: str, videoSelected: List[str]):
+
+        temario = self.get_temario_id_mongo(id_temario)
+        sub_temas = ""
+        contenido = ""
+
+        for aspec in temario.aspectos:
+            content_tema = ""
+            sub_temas += aspec.aspecto
+            for video in aspec.videos:
+                if video.videoId in videoSelected:
+                    content_tema += "Autor: " + video.channelTitle + " | fecha publicación: " + video.publishTime + "\n"
+                    content_tema += f"Fuente: https://www.youtube.com/watch?v={video.videoId}" + "\n"
+                    content_tema += f"Título: {video.title}" + "\n"
+
+                    if len(video.resume) <= 0:
+                        vid_new = self.get_video_with_trans_resume(id_temario=id_temario, videoId=video.videoId)
+                        content_tema += vid_new.resume + "\n"
+                    else:
+                        content_tema += video.resume + "\n\n"
+            if len(content_tema) > 0:
+                content_tema = "subtema: " + aspec.aspecto + "\n" + content_tema
+            contenido = contenido + content_tema
+        self.build_document(temario.temaCentral, sub_temas, contenido)
+
+    def build_document(self, temaCentral: str, sub_temas: str, contenido: str):
+
+        content_pdf = ""
+
+        if len(contenido) > 0:
+            contenido = "Tema Central: " + temaCentral + "\n" + contenido
+            content_pdf = self.get_pdf_content(tema_central=temaCentral, sub_temas=sub_temas, content=contenido)
+
+        else:
+            contenido = "NO HAY CONTENIDO SELECCIONADO"
+
+        doc = SimpleDocTemplate("test.pdf", pagesize=letter)
+        styles = getSampleStyleSheet()
+
+        centered_bold_style = ParagraphStyle(
+            'CenteredBold',
+            parent=styles['BodyText'],
+            fontName='Helvetica-Bold',
+            fontSize=12,
+            alignment=TA_CENTER,
+        )
+
+        centered_style = ParagraphStyle(
+            'Centered',
+            parent=styles['BodyText'],
+            fontSize=10,
+            alignment=TA_CENTER,
+        )
+
+        flow_ables = []
+        line = dt.title_tema + " " + temaCentral
+        para = Paragraph(line.strip(), centered_bold_style)
+        flow_ables.append(para)
+
+        labels = dt.label_info.split('\n')
+        for line in labels:
+            para = Paragraph(line.strip(), centered_style)
+            flow_ables.append(para)
+
+        lines = content_pdf.split('\n')
+        for line in lines:
+            para = Paragraph(line.strip(), styles["BodyText"])
+            flow_ables.append(para)
+
+        flow_ables.append(PageBreak())
+
+        line = "CONTENIDO GENERADO EN BASE A:"
+        para = Paragraph(line.strip(), centered_bold_style)
+        flow_ables.append(para)
+
+        lines = contenido.split('\n')
+        for line in lines:
+            para = Paragraph(line.strip(), styles["BodyText"])
+            flow_ables.append(para)
+
+        doc.build(flow_ables)
