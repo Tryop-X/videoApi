@@ -41,7 +41,7 @@ class VideoRepository:
         try:
             self.client_mongo = MongoClient(dt.MONGO_URI)
             self.db = self.client_mongo[dt.DATABASE_NAME]
-            self.collection = self.db[dt.COLLECTION_NAME]
+            self.collection = self.db[dt.COLLECTION_NAME_TEMARIO]
         except Exception as e:
             print(f"Error connecting to database: {e}")
 

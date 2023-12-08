@@ -1,16 +1,21 @@
 ########################################################################################################################
 ########################## CREDENCIALES Y NOMBRE DE LOS SERVICIOS A USAR ###############################################
 ########################################################################################################################
+import os
+# API_KEY_YOUTUBE = os.getenv("API_KEY_YOUTUBE")
+# API_KEY_OPENAI = os.getenv("API_KEY_OPENAI")
 
 API_KEY_YOUTUBE = "AIzaSyC_SSAcmJZgl_tBU4QuCnUpLCLikBOXkGI"
-API_KEY_OPENAI = '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'
+API_KEY_OPENAI = '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'
 YOUTUBE_API_SERVICE_NAME = 'youtube'
 YOUTUBE_API_VERSION = 'v3'
 
 # MONGO_URI = "mongodb+srv://hveras1:GlDC38DAX913ZSIv@videoai.mkgw6wh.mongodb.net/?retryWrites=true&w=majority"
 MONGO_URI = "mongodb://127.0.0.1:27017/"
 DATABASE_NAME = "video_db"
-COLLECTION_NAME = "temario"
+COLLECTION_NAME_TEMARIO = "temario"
+COLLECTION_NAME_USUARIO = "usuario"
+COLLECTION_NAME_CHAT = "chat"
 
 # MODELOS
 model_temario = "gpt-3.5-turbo"
@@ -79,7 +84,7 @@ REVISIÓN SISTEMÁTICA DE
 
 label_info = """
 Contenido autogenerado por nuestra herramienta de revisión de contenido audiovisual. 
-Hecho por Hugo Vera S. y su amigo.
+Hecho por Hugo Vera y Víctor Vásquez.
 """
 
 footer_info = """
