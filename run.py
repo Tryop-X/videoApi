@@ -7,4 +7,4 @@ app = create_app()
 app.config['TIMEOUT'] = 480
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)

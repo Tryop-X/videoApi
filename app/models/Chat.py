@@ -16,15 +16,28 @@ class ResQues:
         }
 
 class Chat:
-    def __init__(self, idChat: str, date: str, conversation: List[ResQues]):
+    def __init__(self, idChat: str, idTemario: str, idUsuario: str, date: str, conversation: List[ResQues]):
         self.idChat = idChat
+        self.idTemario = idTemario
+        self.idUsuario = idUsuario
         self.date = date
         self.conversation = conversation
 
-    def to_dict(self):
+    def to_dict_mongo(self):
         return {
             'date': self.date,
-            'aspectos': [con.to_dict() for con in self.conversation] if self.conversation else None,
+            'idTemario': self.idTemario,
+            'idUsuario': self.idUsuario,
+            'conversation': [con.to_dict() for con in self.conversation] if self.conversation else None,
+        }
+
+    def to_dict(self):
+        return {
+            'idChat': self.idChat,
+            'idTemario': self.idTemario,
+            'idUsuario': self.idTemario,
+            'date': self.date,
+            'conversation': [con.to_dict() for con in self.conversation] if self.conversation else None,
         }
 
 def get_resques_from_mongo(resques) -> ResQues:
@@ -37,6 +50,8 @@ def get_resques_from_mongo(resques) -> ResQues:
 def get_chat_from_mongo(chat) -> Chat:
     return Chat(
         str(chat['_id']),
+        chat['idTemario'],
+        chat['idUsuario'],
         chat['date'],
         [get_resques_from_mongo(conv) for conv in chat['conversation']] if chat['conversation'] else []
     )

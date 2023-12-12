@@ -6,7 +6,7 @@ import os
 # API_KEY_OPENAI = os.getenv("API_KEY_OPENAI")
 
 API_KEY_YOUTUBE = "AIzaSyC_SSAcmJZgl_tBU4QuCnUpLCLikBOXkGI"
-API_KEY_OPENAI = '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'
+API_KEY_OPENAI = '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'
 YOUTUBE_API_SERVICE_NAME = 'youtube'
 YOUTUBE_API_VERSION = 'v3'
 
@@ -16,12 +16,13 @@ DATABASE_NAME = "video_db"
 COLLECTION_NAME_TEMARIO = "temario"
 COLLECTION_NAME_USUARIO = "usuario"
 COLLECTION_NAME_CHAT = "chat"
+COLLECTION_NAME_DOCUMENT = "documento"
 
 # MODELOS
 model_temario = "gpt-3.5-turbo"
 model_chat = 'gpt-3.5-turbo'
-model_resumen = "gpt-4-1106-preview"
-model_pdf = "gpt-4-1106-preview"
+model_resumen = "gpt-3.5-turbo-16k"
+model_pdf = "gpt-3.5-turbo-16k"
 
 ########################################################################################################################
 ########################## CONTENIDO DEL PROMPT PARA CONSULTA A LOS MODELOS DE GPT #####################################
@@ -75,7 +76,9 @@ def get_pdf_text(tema: str, sub_temas: str):
 
 
 content_chat = """
-Responderás como un investigador experto respondiendo a la siguiente pregunta con el contenido proporcionado
+Vas a responder siembre en Y SOLO EN BASE al contenido proporcionado y citando en formato apa.
+Usarás lenguaje ACADÉMICO para responder. 
+LA RESPUESTA TIENE QUE SER CORTA Y CONCRETA y CORRECTAMENTE CITADA
 """
 
 title_tema = """
@@ -84,8 +87,7 @@ REVISIÓN SISTEMÁTICA DE
 
 label_info = """
 Contenido autogenerado por nuestra herramienta de revisión de contenido audiovisual. 
-Hecho por Hugo Vera y Víctor Vásquez.
-"""
+Hecho por y para """
 
 footer_info = """
 Contenido autogenerado por nuestra herramienta de revisión de contenido audiovisual. 
